@@ -87,18 +87,20 @@ class FlickrFile(object):
         self.flush()
         self.closed = True
 
+    def _stringio_get_data(self):
+        old_seek = self.stringio.tell()
+        self.stringio.seek(0)
+        data = self.stringio.read()
+        self.stringio.seek(old_seek)
+        return data
+
     def flush(self):
         with tempfile.NamedTemporaryFile() as tf:
-            old_seek = self.stringio.tell()
-            self.stringio.seek(0)
-            data = self.stringio.read()
-            img = data_to_png(data)
-            img.save(tf, 'png')
+            data_to_png(self._stringio_get_data()).save(tf, 'png')
             if self.imageid:
                 flickr.replace(filename=tf.name, photo_id=self.imageid, title=self.name, description=str(len(data)), format='bs4')
             else:
                 self.imageid = flickr.upload(filename=tf.name, title=self.name, description=str(len(data)), format='bs4').photoid.text
-            self.stringio.seek(old_seek)
 
     def iter(self):
         return self
